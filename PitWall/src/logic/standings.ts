@@ -48,19 +48,34 @@ function byPosition(a: SessionResult, b: SessionResult): number {
  * provisional ordenando a los pilotos por su mejor vuelta. Para carrera usamos mayor cantidad de vueltas 
  * y menor tiempo en recorrerlas. Exportada para uso en test 
  */
-export function resultsFromLaps(stats: Map<number, DriverLapStats>, sessionType: string): SessionResult[] {
-  const isRace = sessionType === "Race";
+export function resultsFromLaps(stats: Map<number, DriverLapStats>, laps: Lap[], sessionType: string): SessionResult[] {
+  const isRace = sessionType === 'Race';
+
+  // Solo en carrera: tiempo total por dorsal (incluye salidas de boxes, que en carrera cuentan)
+  const totalTimes = isRace
+    ? laps
+        .filter((lap) => (lap.lap_duration ?? 0) > 0)
+        .reduce(
+          (totals, lap) => totals.set(lap.driver_number, (totals.get(lap.driver_number) ?? 0) + (lap.lap_duration ?? 0)),
+          new Map<number, number>(),
+        )
+    : new Map<number, number>();
+  const timeOf = (driverNumber: number) => totalTimes.get(driverNumber) ?? Number.MAX_SAFE_INTEGER;
+
   const ranked = [...stats.values()]
     .filter((driver) => driver.bestLap !== null)
-    .sort((a, b) => 
-      isRace && b.totalLaps !== a.totalLaps
-        ? b.totalLaps - a.totalLaps
-        : (a.bestLap ?? 0) - (b.bestLap ?? 0)
-    );
+    .sort((a, b) => {
+      if (isRace) {
+        if (b.totalLaps !== a.totalLaps) return b.totalLaps - a.totalLaps;   // más vueltas primero
+        return timeOf(a.driverNumber) - timeOf(b.driverNumber);             // menos tiempo total
+      }
+      return (a.bestLap ?? 0) - (b.bestLap ?? 0);                           // resto: mejor vuelta
+    });
 
   const leader = ranked[0];
   const leaderLaps = leader?.totalLaps ?? 0;
   const leaderBestLap = leader?.bestLap ?? 0;
+  const leaderTime = leader ? timeOf(leader.driverNumber) : 0;
 
   return ranked.map((driver, index) => {
     const isLeader = index === 0;
@@ -70,7 +85,9 @@ export function resultsFromLaps(stats: Map<number, DriverLapStats>, sessionType:
 
     if (!isLeader) {
       if (isRace && lapsBehind > 0) {
-        gapToLeader = `+${lapsBehind} LAP${lapsBehind > 1 ? "S" : ""}`;
+        gapToLeader = `+${lapsBehind} LAP${lapsBehind > 1 ? 'S' : ''}`;
+      } else if (isRace) {
+        gapToLeader = timeOf(driver.driverNumber) - leaderTime;
       } else if (driver.bestLap !== null) {
         gapToLeader = driver.bestLap - leaderBestLap;
       }
@@ -79,7 +96,7 @@ export function resultsFromLaps(stats: Map<number, DriverLapStats>, sessionType:
     return {
       driver_number: driver.driverNumber,
       position: index + 1,
-      duration: driver.bestLap,
+      duration: isRace ? totalTimes.get(driver.driverNumber) ?? null : driver.bestLap,
       gap_to_leader: gapToLeader,
       number_of_laps: driver.totalLaps,
     };
@@ -123,8 +140,8 @@ export function buildStandings(results: SessionResult[], drivers: Driver[], laps
   const fastestDriver = findFastestDriver(lapStats);
   const officialResults = results.filter((result) => Number.isFinite(result?.driver_number));
   const isProvisional = officialResults.length === 0;
-  const sessionType : string = session.session_name
-  const source = isProvisional ? resultsFromLaps(lapStats, sessionType) : officialResults;
+  const sessionType : string = session.session_type
+  const source = isProvisional ? resultsFromLaps(lapStats,laps, sessionType) : officialResults;
   
   const rows = [...source]
     .sort(byPosition)
