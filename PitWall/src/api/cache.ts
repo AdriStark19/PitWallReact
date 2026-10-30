@@ -59,6 +59,7 @@ export function writeCache<T>(key: string, data: T): void {
       /* Sin espacio o sin localStorage: seguimos sin caché */
     }
   }
+  window.dispatchEvent(new Event('pitwall:cache'));
 }
 
 /** Borra solo las entradas de esta app y devuelve cuántas había. */
@@ -71,6 +72,7 @@ export function clearCache(): number {
       /* ignorado */
     }
   });
+  window.dispatchEvent(new Event('pitwall:cache'));
   return keys.length;
 }
 
@@ -89,4 +91,8 @@ export async function withCache<T>(key: string, maxAgeMs: number, loader: () => 
   const isEmptyArray = Array.isArray(fresh) && fresh.length === 0;
   if (!isEmptyArray) writeCache(key, fresh);
   return { data: fresh, fromCache: false };
+}
+export function subscribeToCache(onChange: () => void) {
+  window.addEventListener('pitwall:cache', onChange);
+  return () => window.removeEventListener('pitwall:cache', onChange);
 }

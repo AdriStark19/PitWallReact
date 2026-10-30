@@ -1,6 +1,6 @@
-import { useState } from 'react';
+import { useState, useSyncExternalStore  } from 'react';
 import type { Meeting } from './types/openf1';
-import { clearCache, countCacheEntries } from './api/cache';
+import { clearCache, countCacheEntries, subscribeToCache } from './api/cache';
 import { useMeetings } from './hooks/useMeetings';
 import { Calendar } from './components/calendar/Calendar';
 import { Loading } from './components/states/Loading';
@@ -11,6 +11,7 @@ import { MeetingDetail } from './components/session/MeetingDetail';
 const FIRST_SEASON = 2023; // OpenF1 tiene datos desde 2023
 const CURRENT_SEASON = new Date().getFullYear();
 const SEASONS = Array.from({ length: CURRENT_SEASON - FIRST_SEASON + 1 }, (_, index) => CURRENT_SEASON - index);
+const cacheEntries = useSyncExternalStore(subscribeToCache, countCacheEntries);
 
 export default function App() {
   const [year, setYear] = useState(CURRENT_SEASON);
@@ -27,10 +28,6 @@ export default function App() {
     setSelectedMeeting(null); // el GP elegido era de la temporada anterior
   }
 
-  function emptyCache() {
-    clearCache();
-    setCacheVersion((version) => version + 1); // fuerza el repintado para actualizar el botón
-  }
 
   function renderCalendar() {
     if (loading) return <Loading message={`Cargando el calendario ${year}…`} />;
@@ -81,7 +78,7 @@ export default function App() {
               onChange={(event) => setQuery(event.target.value)}
             />
           </label>
-          <button className="button button--ghost" type="button" onClick={emptyCache} disabled={cacheEntries === 0}>
+          <button className="button button--ghost" type="button" onClick={clearCache} disabled={cacheEntries === 0}>
             {cacheEntries > 0 ? `Vaciar caché (${cacheEntries})` : 'Caché vacía'}
           </button>
         </div>
