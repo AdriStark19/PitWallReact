@@ -23,8 +23,11 @@ export function formatLapTime(seconds: number | null | undefined): string {
 export function formatDuration(seconds: number | null | undefined): string {
   if (!isValidSeconds(seconds)) return PLACEHOLDER;
   if (seconds < 3600) return formatLapTime(seconds);
-  const hours = Math.floor(seconds / 3600);
-  return `${hours}:${formatLapTime(seconds - hours * 3600).padStart(9, '0')}`;
+  const totalMs = Math.round(seconds * 1000);
+  const hours = Math.floor(totalMs / 3_600_000);
+  const minutes = Math.floor((totalMs % 3_600_000) / 60_000);
+  const secs = ((totalMs % 60_000) / 1000).toFixed(3).padStart(6, '0');
+  return `${hours}:${String(minutes).padStart(2, '0')}:${secs}`;
 }
 
 /** 1.2 → "+1.200"; "+1 LAP" se deja tal cual; el líder muestra "Líder". */
