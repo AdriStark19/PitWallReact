@@ -1,4 +1,4 @@
-import { useState, useSyncExternalStore  } from 'react';
+import { useState, useSyncExternalStore } from 'react';
 import type { Meeting } from './types/openf1';
 import { clearCache, countCacheEntries, subscribeToCache } from './api/cache';
 import { useMeetings } from './hooks/useMeetings';
@@ -6,28 +6,25 @@ import { Calendar } from './components/calendar/Calendar';
 import { Loading } from './components/states/Loading';
 import { ErrorState } from './components/states/ErrorState';
 import { Empty } from './components/states/Empty';
+import { ErrorBoundary } from './components/states/ErrorBoundary';
 import { MeetingDetail } from './components/session/MeetingDetail';
 
 const FIRST_SEASON = 2023; // OpenF1 tiene datos desde 2023
 const CURRENT_SEASON = new Date().getFullYear();
 const SEASONS = Array.from({ length: CURRENT_SEASON - FIRST_SEASON + 1 }, (_, index) => CURRENT_SEASON - index);
-const cacheEntries = useSyncExternalStore(subscribeToCache, countCacheEntries);
 
 export default function App() {
   const [year, setYear] = useState(CURRENT_SEASON);
   const [query, setQuery] = useState('');
   const [selectedMeeting, setSelectedMeeting] = useState<Meeting | null>(null);
-  const [, setCacheVersion] = useState(0);
   const { meetings, fromCache, loading, error, retry } = useMeetings(year);
-
-  // Se recalcula en cada repintado: cada carga y cada vaciado repintan App
-  const cacheEntries = countCacheEntries();
+  // localStorage está fuera de React: App se suscribe a sus cambios para actualizar el botón
+  const cacheEntries = useSyncExternalStore(subscribeToCache, countCacheEntries);
 
   function changeYear(newYear: number) {
     setYear(newYear);
     setSelectedMeeting(null); // el GP elegido era de la temporada anterior
   }
-
 
   function renderCalendar() {
     if (loading) return <Loading message={`Cargando el calendario ${year}…`} />;
@@ -86,11 +83,15 @@ export default function App() {
 
       <main className="layout">
         <section className="panel panel--calendar" aria-label="Calendario de la temporada" aria-live="polite">
-          {renderCalendar()}
+          {/* key: al cambiar de año, el ErrorBoundary empieza de cero */}
+          <ErrorBoundary key={year}>{renderCalendar()}</ErrorBoundary>
         </section>
         <section className="panel panel--detail" aria-label="Detalle del Gran Premio" aria-live="polite">
           {selectedMeeting ? (
-            <MeetingDetail key={selectedMeeting.meeting_key} meeting={selectedMeeting} />
+            // key: al elegir otro GP, el detalle (y su ErrorBoundary) empiezan de cero
+            <ErrorBoundary key={selectedMeeting.meeting_key}>
+              <MeetingDetail meeting={selectedMeeting} />
+            </ErrorBoundary>
           ) : (
             <Empty title="Elige un Gran Premio" hint="Verás sus sesiones, el podio y la tabla de tiempos." />
           )}
