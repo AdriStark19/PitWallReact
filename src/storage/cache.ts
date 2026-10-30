@@ -1,13 +1,12 @@
 /**
- * BONUS: caché en localStorage para no repetir peticiones ya hechas.
+ * Almacén de la caché en localStorage: leer, escribir, contar y vaciar entradas.
+ * CUÁNDO se usa (antes de pedir a la red, qué se guarda) lo decide el hook useCachedFetch.
  *
  * Cada entrada guarda el momento en que se escribió y caduca pasado su TTL.
  * localStorage puede fallar (modo privado, cuota llena, bloqueado por el
  * navegador), así que todos los accesos van en try/catch: si falla, la app
  * sigue funcionando y simplemente vuelve a pedir los datos a la red.
  */
-
-import type { Loaded } from '../types/openf1.ts';
 
 const PREFIX = 'pitwall:v1:';
 
@@ -78,20 +77,7 @@ export function clearCache(): number {
 
 export const countCacheEntries = (): number => ownKeys().length;
 
-/**
- * Devuelve el dato de caché si existe y es reciente; si no, ejecuta `loader`.
- * Los arrays vacíos no se guardan: suelen ser sesiones futuras que aún no
- * tienen datos, y cachearlos escondería los datos reales cuando lleguen.
- */
-export async function withCache<T>(key: string, maxAgeMs: number, loader: () => Promise<T>): Promise<Loaded<T>> {
-  const cached = readCache<T>(key, maxAgeMs);
-  if (cached !== null) return { data: cached, fromCache: true };
-
-  const fresh = await loader();
-  const isEmptyArray = Array.isArray(fresh) && fresh.length === 0;
-  if (!isEmptyArray) writeCache(key, fresh);
-  return { data: fresh, fromCache: false };
-}
+/** Avisa a quien escuche (el botón de App) cada vez que cambia la caché. */
 export function subscribeToCache(onChange: () => void) {
   window.addEventListener('pitwall:cache', onChange);
   return () => window.removeEventListener('pitwall:cache', onChange);

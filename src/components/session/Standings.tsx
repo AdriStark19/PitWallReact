@@ -1,25 +1,27 @@
-import { useMemo } from 'react';
-import type { Session } from '../../types/openf1';
-import type { SessionBundle } from '../../api/openf1';
+import { useMemo, type CSSProperties } from 'react';
+import type { Driver, Lap, Session, SessionResult } from '../../types/openf1';
 import { buildStandings } from '../../logic/standings';
 import { Empty } from '../states/Empty';
 import { SourceBadge } from '../states/SourceBadge';
 import { Podium } from './Podium';
-import { StandingRowView } from './StandingRowView';
 
 const HEADERS = ['Pos', 'Piloto', 'Tiempo', 'Gap', 'Vueltas', 'Mejor vuelta', 'Ritmo medio'];
 
 interface StandingsProps {
   session: Session;
-  bundle: SessionBundle;
+  drivers: Driver[];
+  laps: Lap[];
+  results: SessionResult[];
+  /** true solo si las tres listas salieron de la caché. */
+  fromCache: boolean;
 }
 
 /** Resultados de una sesión: título, aviso si es provisional, podio y tabla de tiempos. */
-export function Standings({ session, bundle }: StandingsProps) {
+export function Standings({ session, drivers, laps, results, fromCache }: StandingsProps) {
   // Une pilotos, vueltas y resultados en filas ya formateadas (solo si cambian los datos)
   const standings = useMemo(
-    () => buildStandings(bundle.results, bundle.drivers, bundle.laps, session),
-    [bundle, session],
+    () => buildStandings(results, drivers, laps, session),
+    [results, drivers, laps, session],
   );
 
   if (standings.rows.length === 0) {
@@ -30,7 +32,7 @@ export function Standings({ session, bundle }: StandingsProps) {
     <>
       <div className="results-head">
         <h3 className="results-head__title">{session.session_name}</h3>
-        <SourceBadge fromCache={bundle.fromCache} />
+        <SourceBadge fromCache={fromCache} />
       </div>
 
       {standings.isProvisional && (
@@ -54,8 +56,31 @@ export function Standings({ session, bundle }: StandingsProps) {
             </tr>
           </thead>
           <tbody>
+            {/* Los textos de cada fila ya llegan formateados desde logic/standings */}
             {standings.rows.map((row) => (
-              <StandingRowView key={row.driverNumber} row={row} />
+              <tr
+                key={row.driverNumber}
+                className={`row row--${row.status.toLowerCase()}`}
+                style={{ '--team': row.teamColour } as CSSProperties}
+              >
+                <td className="row__pos">{row.positionLabel}</td>
+                <td className="row__driver">
+                  <span className="row__acronym">{row.acronym}</span>
+                  <span className="row__fullname">
+                    {row.fullName} · {row.team}
+                  </span>
+                </td>
+                <td className="num">{row.time}</td>
+                <td className="num">{row.gap}</td>
+                <td className="num">{row.laps}</td>
+                <td
+                  className={`num${row.hasFastestLap ? ' num--fastest' : ''}`}
+                  title={row.hasFastestLap ? 'Vuelta rápida de la sesión' : undefined}
+                >
+                  {row.bestLap}
+                </td>
+                <td className="num num--muted">{row.averagePace}</td>
+              </tr>
             ))}
           </tbody>
         </table>
