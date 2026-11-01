@@ -51,8 +51,6 @@ También le he preguntado qué podía reutilizar de la misión 2 y la jearquía 
 
 - Formato visual del readme.
 
-- Implementación de accesibilidad funcional en las pestañas, manejable por teclas.
-
 ## Autopsia
 
 - Al reutilizar la aplicación anterior el primer cambio ha sido cambiar session_name por session_type para discriminar en clasificaciones provisionales y sustituir el desempate de results from laps que usaba vuelta rápida por el acumulado. La ia me propone añadir un tiempo total y le he pedido hacerlo solo en caso necesario ya que cuando hay resultados oficiales no se necesita "no podríamos hacerlo directamente en la función?? cuando sea necesario?"
@@ -70,3 +68,5 @@ También le he preguntado qué podía reutilizar de la misión 2 y la jearquía 
 - Cambio para que useFetch solo guarde el último resultado. Así nunca muestra datos de una petición anterior.
 
 - renderBody() de MeetingDetail pasa a ser el componente MeetingSessions: la cabecera solo usa la prop meeting, y la carga, el estado y las pestañas de las sesiones quedan en su propio componente. Quité además el useMemo innecesario de las sesiones.
+
+- Quité los useMemo de Calendar y Standings porque guardaban cálculos que no eran excesivamente pesados.

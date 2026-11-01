@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { Meeting } from '../../types/openf1';
 import { CALENDAR_TTL_MS, getMeetings } from '../../api/openf1';
 import { filterMeetings, prepareMeetings, roundNumbers, summarizeSeason } from '../../logic/calendar';
@@ -21,10 +20,10 @@ export function Calendar({ year, query, selectedKey, onSelect }: CalendarProps) 
   const { data: response, loading, error, retry } = useCachedFetch(year, getMeetings, { cacheKey: 'meetings', maxAgeMs: CALENDAR_TTL_MS });
 
   // Valores derivados: se calculan a partir de la respuesta, no se guardan en el estado
-  const meetings = useMemo(() => prepareMeetings(response?.data ?? []), [response]);
-  const summary = useMemo(() => summarizeSeason(meetings), [meetings]); // sobre TODOS los GP
-  const rounds = useMemo(() => roundNumbers(meetings), [meetings]); // sobre TODOS los GP
-  const visible = useMemo(() => filterMeetings(meetings, query), [meetings, query]); // depende de la búsqueda
+    const meetings = prepareMeetings(response?.data ?? []);
+  const summary = summarizeSeason(meetings); // sobre TODOS los GP
+  const rounds = roundNumbers(meetings); // sobre TODOS los GP
+  const visible = filterMeetings(meetings, query); // depende de la búsqueda
 
   if (error) return <ErrorState message={error} onRetry={retry} />;
   if (loading || !response) return <Loading message={`Cargando el calendario ${year}…`} />;

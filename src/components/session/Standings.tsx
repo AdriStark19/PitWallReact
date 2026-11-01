@@ -1,4 +1,3 @@
-import { useMemo } from 'react';
 import type { Driver, Lap, Session, SessionResult } from '../../types/openf1';
 import { buildStandings } from '../../logic/standings';
 import { Empty } from '../states/Empty';
@@ -17,11 +16,8 @@ interface StandingsProps {
 
 /** Resultados de una sesión: título, aviso si es provisional, podio y tabla de tiempos. */
 export function Standings({ session, drivers, laps, results, fromCache }: StandingsProps) {
-  // Une pilotos, vueltas y resultados en filas ya formateadas (solo si cambian los datos)
-  const standings = useMemo(
-    () => buildStandings(results, drivers, laps, session),
-    [results, drivers, laps, session],
-  );
+ // Une pilotos, vueltas y resultados en filas ya formateadas
+  const standings = buildStandings(results, drivers, laps, session);
 
   if (standings.rows.length === 0) {
     return <Empty title="OpenF1 aún no tiene tiempos para esta sesión" hint="Suele publicarlos pocos minutos después de que termine." />;
