@@ -1,4 +1,4 @@
-import { useEffect, useState } from 'react';
+import { useEffect, useEffectEvent, useState } from 'react';
 import { toUserMessage } from '../api/http';
 
 /** Último resultado recibido y a qué petición (clave + intento) pertenece. */
@@ -21,11 +21,15 @@ interface FetchResult<Key, Data> {
  * Si la clave cambia o el componente se desmonta antes de que llegue la respuesta, la limpieza
  * aborta la petición con AbortController.
  *
- * Ojo: `request` está en las dependencias del efecto, así que debe ser una función estable.
+ * `request` no necesita ser estable: el efecto la lee con useEffectEvent, así que una función
+ * flecha creada en cada render no repite la petición. Solo `key` y `retry` lanzan una carga.
  */
 export function useFetch<Key, Data>(key: Key | null, request: (key: Key, signal: AbortSignal) => Promise<Data>) {
   const [retryCount, setRetryCount] = useState(0);
   const [result, setResult] = useState<FetchResult<Key, Data> | null>(null);
+
+  // Siempre usa el último `request` sin que el efecto dependa de él
+  const runRequest = useEffectEvent((currentKey: Key, signal: AbortSignal) => request(currentKey, signal));
 
   useEffect(() => {
     if (key === null) return; // nada que pedir
@@ -34,7 +38,7 @@ export function useFetch<Key, Data>(key: Key | null, request: (key: Key, signal:
     const controller = new AbortController();
     const { signal } = controller;
 
-    request(currentKey, signal).then(
+    runRequest(currentKey, signal).then(
       (data) => {
         if (!signal.aborted) setResult({ key: currentKey, attempt, data, error: null });
       },
@@ -46,7 +50,7 @@ export function useFetch<Key, Data>(key: Key | null, request: (key: Key, signal:
     );
 
     return () => controller.abort();
-  }, [key, request, retryCount]);
+  }, [key, retryCount]);
 
   // Valores derivados: el resultado solo vale si es de la clave e intento actuales
   const isCurrent = key !== null && result !== null && Object.is(result.key, key) && result.attempt === retryCount;
