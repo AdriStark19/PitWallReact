@@ -80,3 +80,5 @@ También le he preguntado qué podía reutilizar de la misión 2 y la jearquía 
 - Quité los useMemo de Calendar y Standings porque guardaban cálculos que no eran excesivamente pesados.
 
 - Cabecera extraída de App a Topbar ya que es la única que hace uso del hook de caché.
+
+- `retry` de useSessionData relanza las tres cargas a propósito: las que ya llegaron están en caché y se leen de localStorage al instante, sin hacer ninguna petición, así que solo la que falló vuelve a la red. Además, las tres son imprescindibles para construir la clasificación, así que la vista espera a tenerlas todas.
