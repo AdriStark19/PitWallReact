@@ -20,7 +20,7 @@ export function Calendar({ year, query, selectedKey, onSelect }: CalendarProps) 
   const { data: response, loading, error, retry } = useCachedFetch(year, getMeetings, { cacheKey: 'meetings', maxAgeMs: CALENDAR_TTL_MS });
 
   // Valores derivados: se calculan a partir de la respuesta, no se guardan en el estado
-    const meetings = prepareMeetings(response?.data ?? []);
+  const meetings = prepareMeetings(response?.data ?? []);
   const summary = summarizeSeason(meetings); // sobre TODOS los GP
   const rounds = roundNumbers(meetings); // sobre TODOS los GP
   const visible = filterMeetings(meetings, query); // depende de la búsqueda

@@ -16,7 +16,7 @@ interface StandingsProps {
 
 /** Resultados de una sesión: título, aviso si es provisional, podio y tabla de tiempos. */
 export function Standings({ session, drivers, laps, results, fromCache }: StandingsProps) {
- // Une pilotos, vueltas y resultados en filas ya formateadas
+  // Une pilotos, vueltas y resultados en filas ya formateadas
   const standings = buildStandings(results, drivers, laps, session);
 
   if (standings.rows.length === 0) {

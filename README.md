@@ -26,6 +26,9 @@ se comprueban los tipos y se genera dist/.
 - **Caché en localStorage**: cada respuesta se guarda con fecha de caducidad (12 h el
   calendario, 7 días los tiempos). Una etiqueta indica si los datos vienen "Desde caché" o
   "Recién descargado", y un botón permite vaciarla.
+- **Pestañas accesibles**: se recorren con las flechas e Inicio/Fin; con Tab se salta de la
+  pestaña activa a los resultados.
+- **Test ejecutables**: haciendo `npm run test` se pueden probar clasificaciones provisionales y el formateo de tiempos.
 
 **Bonus — custom hooks reutilizables** (`src/hooks/`)
 - `useFetch(clave, petición)`: carga genérica con estado de carga, error y reintento.
@@ -34,7 +37,8 @@ se comprueban los tipos y se genera dist/.
 - `useCache()`: número de entradas en caché, siempre al día, y función para vaciarla.
 - `useLocalStorage(clave, inicial)`: como useState, pero sobrevive a recargar. Recuerda la temporada.
 - `useSessionData(sesión)`: agrupa las tres cargas de una sesión (pilotos, vueltas y
-  resultados) en un único estado con datos, carga, error y reintento
+  resultados) en un único estado con datos, carga, error y reintento.
+- `useRovingTabs(items, getKey, onSelect)`: navegación con teclado para pestañas (flechas e Inicio/Fin).
 
 ## Uso de IA
 
@@ -50,6 +54,10 @@ También le he preguntado qué podía reutilizar de la misión 2 y la jearquía 
 - Ayuda para la implementación de abort controller en lugar de solo ignorar la petición.
 
 - Formato visual del readme.
+
+- Separación de header del cuerpo de la app.
+
+- Hook de accesibilidad y su integración.
 
 ## Autopsia
 
@@ -70,3 +78,5 @@ También le he preguntado qué podía reutilizar de la misión 2 y la jearquía 
 - renderBody() de MeetingDetail pasa a ser el componente MeetingSessions: la cabecera solo usa la prop meeting, y la carga, el estado y las pestañas de las sesiones quedan en su propio componente. Quité además el useMemo innecesario de las sesiones.
 
 - Quité los useMemo de Calendar y Standings porque guardaban cálculos que no eran excesivamente pesados.
+
+- Cabecera extraída de app a topbar ya que es la única que hace uso del hook de caché.

@@ -34,7 +34,14 @@ export function MeetingSessions({ meetingKey }: MeetingSessionsProps) {
         onSelect={(session) => setChosenKey(session.session_key)}
       />
       {selected && (
-        <div className="results" aria-live="polite">
+         <div
+          className="results"
+          role="tabpanel"
+          id={`panel-${selected.session_key}`}
+          aria-labelledby={`tab-${selected.session_key}`}
+          aria-live="polite"
+          tabIndex={0}
+        >
           {/* key: al cambiar de sesión, SessionResults empieza de cero (sin la tabla anterior) */}
           <SessionResults key={selected.session_key} session={selected} />
         </div>
