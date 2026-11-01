@@ -34,18 +34,19 @@ function toSlimLap(lap: Lap): Lap {
   };
 }
 
-export const getMeetings = (year: number): Promise<Meeting[]> => fetchJsonArray<Meeting>(buildUrl('meetings', { year }));
+export const getMeetings = (year: number, signal?: AbortSignal): Promise<Meeting[]> =>
+  fetchJsonArray<Meeting>(buildUrl('meetings', { year }), signal);
 
-export const getSessions = (meetingKey: number): Promise<Session[]> =>
-  fetchJsonArray<Session>(buildUrl('sessions', { meeting_key: meetingKey }));
+export const getSessions = (meetingKey: number, signal?: AbortSignal): Promise<Session[]> =>
+  fetchJsonArray<Session>(buildUrl('sessions', { meeting_key: meetingKey }), signal);
 
-export const getDrivers = (sessionKey: number): Promise<Driver[]> =>
-  fetchJsonArray<Driver>(buildUrl('drivers', { session_key: sessionKey }));
+export const getDrivers = (sessionKey: number, signal?: AbortSignal): Promise<Driver[]> =>
+  fetchJsonArray<Driver>(buildUrl('drivers', { session_key: sessionKey }), signal);
 
-export const getLaps = async (sessionKey: number): Promise<Lap[]> => {
-  const laps = await fetchJsonArray<Lap>(buildUrl('laps', { session_key: sessionKey }));
+export const getLaps = async (sessionKey: number, signal?: AbortSignal): Promise<Lap[]> => {
+  const laps = await fetchJsonArray<Lap>(buildUrl('laps', { session_key: sessionKey }), signal);
   return laps.map(toSlimLap);
 };
 
-export const getSessionResults = (sessionKey: number): Promise<SessionResult[]> =>
-  fetchJsonArray<SessionResult>(buildUrl('session_result', { session_key: sessionKey }));
+export const getSessionResults = (sessionKey: number, signal?: AbortSignal): Promise<SessionResult[]> =>
+  fetchJsonArray<SessionResult>(buildUrl('session_result', { session_key: sessionKey }), signal);

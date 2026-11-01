@@ -29,18 +29,25 @@ function describeStatus(status: number): string {
 }
 
 /** Lanza la petición cortándola si supera TIMEOUT_MS. */
-async function requestWithTimeout(url: string): Promise<Response> {
+async function requestWithTimeout(url: string, signal?: AbortSignal): Promise<Response> {
+  signal?.throwIfAborted();
+
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
+  const cancel = () => controller.abort();
+  signal?.addEventListener('abort', cancel);
+
   try {
     return await fetch(url, { signal: controller.signal, headers: { Accept: 'application/json' } });
   } catch (error) {
+    if (signal?.aborted) throw error; // cancelada a propósito
     if (error instanceof DOMException && error.name === 'AbortError') {
       throw new ApiError('OpenF1 está tardando demasiado en responder. Reintenta en un momento.');
     }
     throw new ApiError('No se pudo conectar con OpenF1. Comprueba tu conexión a internet.');
   } finally {
     clearTimeout(timer);
+    signal?.removeEventListener('abort', cancel);
   }
 }
 
@@ -60,13 +67,13 @@ async function parseArrayBody<T>(response: Response): Promise<T[]> {
  * - 404 significa "sin resultados" para ese filtro: devolvemos [] en vez de fallar.
  * - 429 (rate limit) se reintenta una vez tras una pequeña espera.
  */
-export async function fetchJsonArray<T>(url: string): Promise<T[]> {
+export async function fetchJsonArray<T>(url: string, signal?: AbortSignal): Promise<T[]> {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
-    const response = await requestWithTimeout(url);
+    const response = await requestWithTimeout(url, signal);
 
     if (response.status === 404) return [];
     if (response.status === 429 && attempt < MAX_ATTEMPTS) {
-      await wait(RATE_LIMIT_RETRY_MS * attempt);
+      await wait(RATE_LIMIT_RETRY_MS * attempt, signal);
       continue;
     }
     if (!response.ok) throw new ApiError(describeStatus(response.status), response.status);

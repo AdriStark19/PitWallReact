@@ -1,54 +1,58 @@
 import { useEffect, useState } from 'react';
 import { toUserMessage } from '../api/http';
 
+/** Último resultado recibido y a qué petición (clave + intento) pertenece. */
+interface FetchResult<Key, Data> {
+  key: Key;
+  attempt: number;
+  data: Data | null;
+  error: string | null;
+}
+
 /**
  * Hook genérico de carga de datos (useFetch).
- * Llama a `request(key)` cada vez que cambia `key` y expone los datos, si está cargando,
+ * Llama a `request(key, signal)` cada vez que cambia `key` y expone los datos, si está cargando,
  * el mensaje de error y un `retry` para el botón "Reintentar". Con `key` null no pide nada
  * (por ejemplo, una sesión que todavía no se ha disputado).
  *
- * El hook no sabe QUÉ pide, solo CUÁNDO pedirlo y cómo guardar el resultado.
- * useCachedFetch lo usa por debajo para todas las cargas de la app.
+ * Solo se guarda en el estado el último resultado junto a su clave e intento; `data`, `error`
+ * y `loading` se derivan de él. Así, al cambiar de clave nunca se muestran los datos anteriores.
  *
- * Ojo: `request` está en las dependencias del efecto, así que debe ser una función estable
- * (las de api/openf1 lo son porque se definen una vez en el módulo). Una flecha escrita
- * dentro del componente sería nueva en cada render y repetiría la petición sin fin.
+ * Si la clave cambia o el componente se desmonta antes de que llegue la respuesta, la limpieza
+ * aborta la petición con AbortController.
+ *
+ * Ojo: `request` está en las dependencias del efecto, así que debe ser una función estable.
  */
-export function useFetch<Key, Data>(key: Key | null, request: (key: Key) => Promise<Data>) {
-  const [data, setData] = useState<Data | null>(null);
-  const [loading, setLoading] = useState(key !== null);
-  const [error, setError] = useState<string | null>(null);
+export function useFetch<Key, Data>(key: Key | null, request: (key: Key, signal: AbortSignal) => Promise<Data>) {
   const [retryCount, setRetryCount] = useState(0);
+  const [result, setResult] = useState<FetchResult<Key, Data> | null>(null);
 
   useEffect(() => {
     if (key === null) return; // nada que pedir
+    const currentKey = key;
+    const attempt = retryCount;
+    const controller = new AbortController();
+    const { signal } = controller;
 
-    // Si la clave cambia antes de que llegue la respuesta, la limpieza la marca como vieja
-    let cancelled = false;
-
-    async function load(currentKey: Key) {
-      setLoading(true);
-      setError(null);
-      try {
-        const result = await request(currentKey);
-        if (cancelled) return;
-        setData(result);
-      } catch (err) {
-        if (cancelled) return;
+    request(currentKey, signal).then(
+      (data) => {
+        if (!signal.aborted) setResult({ key: currentKey, attempt, data, error: null });
+      },
+      (err: unknown) => {
+        if (signal.aborted) return; // cancelada a propósito: no es un error
         console.error('[api]', err);
-        setData(null);
-        setError(toUserMessage(err));
-      } finally {
-        if (!cancelled) setLoading(false);
-      }
-    }
+        setResult({ key: currentKey, attempt, data: null, error: toUserMessage(err) });
+      },
+    );
 
-    void load(key);
-
-    return () => {
-      cancelled = true;
-    };
+    return () => controller.abort();
   }, [key, request, retryCount]);
+
+  // Valores derivados: el resultado solo vale si es de la clave e intento actuales
+  const isCurrent = key !== null && result !== null && Object.is(result.key, key) && result.attempt === retryCount;
+  const data = isCurrent ? result.data : null;
+  const error = isCurrent ? result.error : null;
+  const loading = key !== null && !isCurrent;
 
   /** Vuelve a pedir lo mismo: cambiar retryCount hace que el efecto se repita. */
   const retry = () => setRetryCount((count) => count + 1);
