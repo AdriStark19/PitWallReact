@@ -18,7 +18,20 @@ export class ApiError extends Error {
   }
 }
 
-const wait = (ms: number) => new Promise<void>((resolve) => setTimeout(resolve, ms));
+/** Espera `ms`, pero se corta si cancelan la petición mientras tanto. */
+function wait(ms: number, signal?: AbortSignal): Promise<void> {
+  return new Promise((resolve, reject) => {
+    const timer = setTimeout(resolve, ms);
+    signal?.addEventListener(
+      'abort',
+      () => {
+        clearTimeout(timer);
+        reject(signal.reason);
+      },
+      { once: true },
+    );
+  });
+}
 
 function describeStatus(status: number): string {
   if (status === 429) return 'OpenF1 está limitando las peticiones. Espera unos segundos y reintenta.';
@@ -28,9 +41,14 @@ function describeStatus(status: number): string {
   return `La API respondió con un error inesperado (${status}).`;
 }
 
-/** Lanza la petición cortándola si supera TIMEOUT_MS. */
+/**
+ * Lanza la petición y la corta en dos casos:
+ * - tarda más de TIMEOUT_MS: error para el usuario;
+ * - quien la pidió la cancela con `signal` (cambió de GP, se desmontó...): no es un fallo,
+ *   se relanza el AbortError para que useFetch lo ignore.
+ */
 async function requestWithTimeout(url: string, signal?: AbortSignal): Promise<Response> {
-  signal?.throwIfAborted();
+  signal?.throwIfAborted(); // ya estaba cancelada: ni la enviamos
 
   const controller = new AbortController();
   const timer = setTimeout(() => controller.abort(), TIMEOUT_MS);
@@ -66,6 +84,7 @@ async function parseArrayBody<T>(response: Response): Promise<T[]> {
  * Pide un endpoint de OpenF1 y devuelve siempre un array.
  * - 404 significa "sin resultados" para ese filtro: devolvemos [] en vez de fallar.
  * - 429 (rate limit) se reintenta una vez tras una pequeña espera.
+ * - `signal` permite cancelar la petición (y la espera del reintento) desde fuera.
  */
 export async function fetchJsonArray<T>(url: string, signal?: AbortSignal): Promise<T[]> {
   for (let attempt = 1; attempt <= MAX_ATTEMPTS; attempt++) {
