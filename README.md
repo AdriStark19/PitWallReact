@@ -79,4 +79,4 @@ También le he preguntado qué podía reutilizar de la misión 2 y la jearquía 
 
 - Quité los useMemo de Calendar y Standings porque guardaban cálculos que no eran excesivamente pesados.
 
-- Cabecera extraída de app a topbar ya que es la única que hace uso del hook de caché.
+- Cabecera extraída de App a Topbar ya que es la única que hace uso del hook de caché.

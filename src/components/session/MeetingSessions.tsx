@@ -34,7 +34,7 @@ export function MeetingSessions({ meetingKey }: MeetingSessionsProps) {
         onSelect={(session) => setChosenKey(session.session_key)}
       />
       {selected && (
-         <div
+        <div
           className="results"
           role="tabpanel"
           id={`panel-${selected.session_key}`}
